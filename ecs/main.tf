@@ -41,7 +41,7 @@ resource "aws_launch_template" "this" {
     }
   }
   user_data = base64encode(templatefile("${path.module}/userdata.sh", {
-    name = var.name
+    name   = var.name
     region = data.aws_region.current.name
   }))
 }
@@ -116,8 +116,8 @@ resource "aws_iam_role" "this" {
 }
 
 resource "aws_iam_role_policy" "rexray" {
-  name = "rexray-policy-for-ecs"
-  role = aws_iam_role.this.id
+  name   = "rexray-policy-for-ecs"
+  role   = aws_iam_role.this.id
   policy = file("${path.module}/rexray-policy.json")
 }
 

@@ -5,5 +5,5 @@ variable "ecs_cluster" {
 
 variable "log_group" {
   description = "Name of CloudWatch log group to use"
-  default = "/ecs/tasks"
+  default     = "/ecs/tasks"
 }

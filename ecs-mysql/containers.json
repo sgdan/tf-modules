@@ -19,10 +19,10 @@
                 "protocol": "tcp"
             }
         ],
-        "environment": [
+        "secrets": [
             {
                 "name": "MYSQL_ROOT_PASSWORD",
-                "value": "my-secret-pw"
+                "valueFrom": "arn:aws:ssm:${region}:${account}:parameter/mysql/password"
             }
         ],
         "mountPoints": [
