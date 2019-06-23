@@ -1,0 +1,35 @@
+[
+    {
+        "name": "mysql",
+        "image": "mysql",
+        "essential": true,
+        "cpu": 512,
+        "memory": 512,
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${log_group}",
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "mysql"
+            }
+        },
+        "portMappings": [
+            {
+                "containerPort": 3306,
+                "protocol": "tcp"
+            }
+        ],
+        "environment": [
+            {
+                "name": "MYSQL_ROOT_PASSWORD",
+                "value": "my-secret-pw"
+            }
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/var/lib/mysql",
+                "sourceVolume": "mysql-data"
+            }
+        ]
+    }
+]
