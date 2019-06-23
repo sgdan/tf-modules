@@ -11,6 +11,23 @@ resource "aws_ecs_service" "this" {
   cluster         = data.aws_ecs_cluster.this.arn
   task_definition = aws_ecs_task_definition.this.arn
   desired_count   = 1
+  service_registries {
+    registry_arn = aws_service_discovery_service.this.arn
+    container_port = 3306
+    container_name = "mysql"
+  }
+}
+
+resource "aws_service_discovery_service" "this" {
+  name = "mysql"
+  dns_config {
+    namespace_id = var.private_namespace_id
+    dns_records {
+      ttl  = 10
+      type = "SRV"
+    }
+    routing_policy = "MULTIVALUE"
+  }
 }
 
 resource "random_string" "this" {

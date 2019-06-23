@@ -139,3 +139,10 @@ resource "aws_iam_role_policy_attachment" "cwlogs" {
 resource "aws_cloudwatch_log_group" "this" {
   name = "/ecs/tasks"
 }
+
+# Service discovery
+resource "aws_service_discovery_private_dns_namespace" "this" {
+  name        = "ecs.local"
+  description = "Namespace for internal services"
+  vpc         = var.vpc_id
+}
