@@ -1,30 +1,23 @@
-data "aws_subnet_ids" "public" {
-  vpc_id = var.vpc_id
-  tags = {
+data "aws_availability_zones" "all" {}
+
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "2.7.0"
+
+  name            = "simple-vpc"
+  cidr            = var.vpc_cidr
+  azs             = [data.aws_availability_zones.all.names[0], data.aws_availability_zones.all.names[1]]
+  public_subnets  = var.public_subnet_cidrs
+  private_subnets = var.private_subnet_cidrs
+  public_subnet_tags = {
     Tier = "public"
   }
-}
-
-data "aws_subnet_ids" "private" {
-  vpc_id = var.vpc_id
-  tags = {
+  private_subnet_tags = {
     Tier = "private"
   }
-}
 
-locals {
-  num_private_subnets = length(data.aws_subnet_ids.private.ids)
-  private_subnet_ids  = tolist(data.aws_subnet_ids.private.ids)
-}
-
-data "aws_subnet" "private" {
-  count = local.num_private_subnets
-  id    = local.private_subnet_ids[count.index]
-}
-
-data "aws_route_table" "private" {
-  count     = local.num_private_subnets
-  subnet_id = local.private_subnet_ids[count.index]
+  # will use NAT instance instead since it's cheaper
+  enable_nat_gateway = false
 }
 
 # Find the latest NAT instance AMI
@@ -53,7 +46,7 @@ data "aws_ami" "current" {
 resource "aws_instance" "this" {
   ami                    = data.aws_ami.current.id
   instance_type          = "t2.micro"
-  subnet_id              = tolist(data.aws_subnet_ids.public.ids)[0]
+  subnet_id              = module.vpc.public_subnets[0]
   vpc_security_group_ids = [aws_security_group.this.id]
   source_dest_check      = false # required to support NAT
   tags = {
@@ -62,14 +55,14 @@ resource "aws_instance" "this" {
 }
 
 resource "aws_route" "this" {
-  count                  = local.num_private_subnets
-  route_table_id         = data.aws_route_table.private.*.id[count.index]
+  count                  = length(module.vpc.private_route_table_ids)
+  route_table_id         = module.vpc.private_route_table_ids[count.index]
   destination_cidr_block = "0.0.0.0/0"
   instance_id            = aws_instance.this.id
 }
 
 resource "aws_security_group" "this" {
-  vpc_id = var.vpc_id
+  vpc_id = module.vpc.vpc_id
   tags = {
     Name = "NAT Instance SG"
   }
@@ -81,7 +74,7 @@ resource "aws_security_group_rule" "http_in" {
   from_port         = 80
   to_port           = 80
   protocol          = "tcp"
-  cidr_blocks       = data.aws_subnet.private.*.cidr_block
+  cidr_blocks       = var.private_subnet_cidrs
 }
 resource "aws_security_group_rule" "https_in" {
   security_group_id = aws_security_group.this.id
@@ -89,7 +82,7 @@ resource "aws_security_group_rule" "https_in" {
   from_port         = 443
   to_port           = 443
   protocol          = "tcp"
-  cidr_blocks       = data.aws_subnet.private.*.cidr_block
+  cidr_blocks       = var.private_subnet_cidrs
 }
 
 resource "aws_security_group_rule" "http_out" {
@@ -107,4 +100,9 @@ resource "aws_security_group_rule" "https_out" {
   to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = ["0.0.0.0/0"]
+}
+
+# Empty default sg with no ingress/egress allowed
+resource "aws_default_security_group" "default" {
+  vpc_id = module.vpc.vpc_id
 }
