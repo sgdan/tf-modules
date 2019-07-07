@@ -1,6 +1,6 @@
 [
     {
-        "name": "nexus3",
+        "name": "${name}",
         "image": "sonatype/nexus3:3.17.0",
         "essential": true,
         "cpu": 1500,
@@ -8,9 +8,9 @@
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
-                "awslogs-group": "${log_group}",
+                "awslogs-group": "${name}",
                 "awslogs-region": "${region}",
-                "awslogs-stream-prefix": "nexus3"
+                "awslogs-stream-prefix": "main"
             }
         },
         "portMappings": [

@@ -1,0 +1,59 @@
+[
+    {
+        "name": "${name}",
+        "image": "concourse/concourse:5.3.0",
+        "essential": true,
+        "memory": 512,
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${name}",
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "main"
+            }
+        },
+        "command": [
+            "web"
+        ],
+        "environment": [
+            {
+                "name": "CONCOURSE_EXTERNAL_URL",
+                "value": "https://concourse.${domain}"
+            },
+            {
+                "name": "CONCOURSE_POSTGRES_HOST",
+                "value": "${address}"
+            },
+            {
+                "name": "CONCOURSE_POSTGRES_USER",
+                "value": "concourse"
+            },
+            {
+                "name": "CONCOURSE_POSTGRES_DB",
+                "value": "concourse"
+            },
+            {
+                "name": "CONCOURSE_ADD_LOCAL_USER",
+                "value": "test:test"
+            },
+            {
+                "name": "CONCOURSE_MAIN_TEAM_LOCAL_USER",
+                "value": "test"
+            },
+            {
+                "name": "CONCOURSE_POSTGRES_PASSWORD",
+                "value": "${password}"
+            }
+        ],
+        "portMappings": [
+            {
+                "containerPort": 8080
+            }
+        ],
+        "dockerLabels": {
+            "traefik.enable": "true",
+            "traefik.frontend.rule": "Host:concourse.${domain}",
+            "traefik.port": "8080"
+        }
+    }
+]

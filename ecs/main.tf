@@ -1,5 +1,5 @@
 locals {
-  log_group = "traefik"
+  name = "traefik"
 }
 
 data "aws_region" "current" {}
@@ -237,13 +237,13 @@ resource "aws_lb_target_group" "this" {
 
 # Traefik service for reverse proxying to other services
 resource "aws_ecs_service" "this" {
-  name            = "traefik"
+  name            = local.name
   cluster         = aws_ecs_cluster.this.id
   task_definition = aws_ecs_task_definition.this.arn
   desired_count   = 1
   load_balancer {
     target_group_arn = aws_lb_target_group.this.arn
-    container_name   = "traefik"
+    container_name   = local.name
     container_port   = 80
   }
   network_configuration {
@@ -265,13 +265,13 @@ resource "aws_iam_role_policy" "task" {
   policy = file("${path.module}/task-policy.json")
 }
 resource "aws_ecs_task_definition" "this" {
-  family                   = "traefik"
+  family                   = local.name
   task_role_arn            = aws_iam_role.task.arn
   requires_compatibilities = ["EC2"]
   network_mode             = "awsvpc"
   container_definitions = templatefile("${path.module}/traefik-containers.json", {
     region    = data.aws_region.current.name
-    log_group = local.log_group
+    name      = local.name
     domain    = var.domain
     whitelist = var.internet_whitelist
   })

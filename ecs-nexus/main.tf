@@ -1,5 +1,5 @@
 locals {
-  log_group = "nexus3"
+  name = "nexus3"
 }
 
 data "aws_region" "current" {}
@@ -10,18 +10,18 @@ data "aws_ecs_cluster" "this" {
 }
 
 resource "aws_ecs_service" "this" {
-  name            = "nexus3"
+  name            = local.name
   cluster         = data.aws_ecs_cluster.this.arn
   task_definition = aws_ecs_task_definition.this.arn
   desired_count   = 1
 }
 
 resource "aws_ecs_task_definition" "this" {
-  family = "nexus3"
+  family = local.name
   container_definitions = templatefile("${path.module}/containers.json", {
-    region    = data.aws_region.current.name
-    log_group = local.log_group
-    domain    = var.domain
+    region = data.aws_region.current.name
+    name   = local.name
+    domain = var.domain
   })
   placement_constraints {
     type       = "memberOf"
@@ -44,5 +44,5 @@ resource "aws_ecs_task_definition" "this" {
 }
 
 resource "aws_cloudwatch_log_group" "this" {
-  name = "nexus3"
+  name = local.name
 }

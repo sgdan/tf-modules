@@ -1,0 +1,29 @@
+[
+    {
+        "name": "${name}",
+        "image": "concourse/concourse:5.3.0",
+        "essential": true,
+        "memory": 512,
+        "privileged": true,
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${name}",
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "main"
+            }
+        },
+        "command": [
+            "worker"
+        ],
+        "links": [
+            "concourse-web"
+        ],
+        "environment": [
+            {
+                "name": "CONCOURSE_TSA_HOST",
+                "value": "concourse-web:2222"
+            }
+        ]
+    }
+]

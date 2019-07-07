@@ -1,6 +1,6 @@
 [
     {
-        "name": "traefik",
+        "name": "${name}",
         "image": "sgdan/traefik-ecs",
         "essential": true,
         "memory": 512,
@@ -8,9 +8,9 @@
         "logConfiguration": {
             "logDriver": "awslogs",
             "options": {
-                "awslogs-group": "${log_group}",
+                "awslogs-group": "${name}",
                 "awslogs-region": "${region}",
-                "awslogs-stream-prefix": "traefik"
+                "awslogs-stream-prefix": "main"
             }
         },
         "portMappings": [

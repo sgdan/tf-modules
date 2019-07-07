@@ -1,4 +1,3 @@
-
 variable "vpc_id" {
   description = "ID of VPC where cluster will be created"
 }
