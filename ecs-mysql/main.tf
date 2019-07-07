@@ -89,7 +89,6 @@ resource "aws_ecs_task_definition" "this" {
   }
 }
 
-resource "aws_cloudwatch_log_stream" "this" {
-  name           = "mysql"
-  log_group_name = var.log_group
+resource "aws_cloudwatch_log_group" "this" {
+  name = "mysql"
 }

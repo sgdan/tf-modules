@@ -1,0 +1,55 @@
+[
+    {
+        "name": "traefik",
+        "image": "sgdan/traefik-ecs",
+        "essential": true,
+        "memory": 512,
+        "memoryReservation": 256,
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${log_group}",
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "traefik"
+            }
+        },
+        "portMappings": [
+            {
+                "containerPort": 80,
+                "hostPort": 80,
+                "protocol": "tcp"
+            },
+            {
+                "containerPort": 8080,
+                "hostPort": 8080,
+                "protocol": "tcp"
+            }
+        ],
+        "environment": [
+            {
+                "name": "LOG_LEVEL",
+                "value": "INFO"
+            },
+            {
+                "name": "DOMAIN",
+                "value": "${domain}"
+            },
+            {
+                "name": "AWS_REGION",
+                "value": "${region}"
+            }
+        ],
+        "ulimits": [
+            {
+                "name": "nofile",
+                "softLimit": 10240,
+                "hardLimit": 65536
+            }
+        ],
+        "dockerLabels": {
+            "traefik.enable": "true",
+            "traefik.frontend.rule": "Host:traefik.${domain}",
+            "traefik.port": "8080"
+        }
+    }
+]

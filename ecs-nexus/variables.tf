@@ -7,6 +7,6 @@ variable "vpc_id" {
   description = "ID of VPC"
 }
 
-variable "private_namespace_id" {
-  description = "ID of service discovery namespace"
+variable "domain" {
+  description = "Domain where this service will be deplyed e.g. example.com"
 }

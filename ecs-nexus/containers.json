@@ -1,0 +1,40 @@
+[
+    {
+        "name": "nexus3",
+        "image": "sonatype/nexus3:3.17.0",
+        "essential": true,
+        "cpu": 1500,
+        "memory": 1500,
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${log_group}",
+                "awslogs-region": "${region}",
+                "awslogs-stream-prefix": "nexus3"
+            }
+        },
+        "portMappings": [
+            {
+                "containerPort": 8081,
+                "protocol": "tcp"
+            }
+        ],
+        "environment": [
+            {
+                "name": "INSTALL4J_ADD_VM_PARAMS",
+                "value": "-Xms1200m -Xmx1200m -XX:MaxDirectMemorySize=2g -Djava.util.prefs.userRoot=$${NEXUS_DATA}/javaprefs"
+            }
+        ],
+        "mountPoints": [
+            {
+                "containerPath": "/nexus-data",
+                "sourceVolume": "nexus-data"
+            }
+        ],
+        "dockerLabels": {
+            "traefik.enable": "true",
+            "traefik.frontend.rule": "Host:nexus3.${domain}",
+            "traefik.port": "8081"
+        }
+    }
+]
