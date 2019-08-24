@@ -2,6 +2,7 @@
 set -ex
 
 apt update && apt upgrade -y
+apt install -y awscli make
 sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
 /etc/init.d/ssh restart
 
