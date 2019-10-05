@@ -12,7 +12,7 @@ resource "aws_ecs_service" "this" {
   task_definition = aws_ecs_task_definition.this.arn
   desired_count   = 1
   service_registries {
-    registry_arn = aws_service_discovery_service.this.arn
+    registry_arn   = aws_service_discovery_service.this.arn
     container_port = 3306
     container_name = "mysql"
   }
