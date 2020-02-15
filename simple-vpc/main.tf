@@ -2,19 +2,17 @@ data "aws_availability_zones" "all" {}
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "2.7.0"
+  version = "2.24.0"
 
-  name            = "simple-vpc"
-  cidr            = var.vpc_cidr
-  azs             = [data.aws_availability_zones.all.names[0], data.aws_availability_zones.all.names[1]]
-  public_subnets  = var.public_subnet_cidrs
-  private_subnets = var.private_subnet_cidrs
-  public_subnet_tags = {
-    Tier = "public"
-  }
-  private_subnet_tags = {
-    Tier = "private"
-  }
+  name                = "simple-vpc"
+  cidr                = var.vpc_cidr
+  azs                 = [data.aws_availability_zones.all.names[0], data.aws_availability_zones.all.names[1]]
+  public_subnets      = var.public_subnet_cidrs
+  private_subnets     = var.private_subnet_cidrs
+  public_subnet_tags  = { Tier = "public" }
+  private_subnet_tags = merge({ Tier = "private" }, var.custom_private_tags)
+
+  vpc_tags = var.custom_vpc_tags
 
   # will use NAT instance instead since it's cheaper
   enable_nat_gateway = false
@@ -62,6 +60,7 @@ resource "aws_route" "this" {
 }
 
 resource "aws_security_group" "this" {
+  name   = "nat-instance-sg"
   vpc_id = module.vpc.vpc_id
   tags = {
     Name = "NAT Instance SG"

@@ -3,9 +3,11 @@ data "aws_availability_zones" "all" {}
 
 data "aws_subnet_ids" "private" {
   vpc_id = var.vpc_id
-  tags = {
-    Tier = "private"
-  }
+  tags   = { Tier = "private" }
+}
+data "aws_subnet_ids" "public" {
+  vpc_id = var.vpc_id
+  tags   = { Tier = "public" }
 }
 
 data "aws_eks_cluster" "this" {
@@ -22,8 +24,16 @@ data "aws_ami" "this" {
 }
 
 resource "aws_iam_role" "this" {
-  description        = "Instance role for eks ${var.name} cluster"
-  assume_role_policy = file("${path.module}/role_policy.json")
+  name        = "eks-${var.name}-worker-role"
+  description = "Worker role for eks ${var.name} cluster"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "node" {
@@ -85,6 +95,7 @@ resource "aws_autoscaling_group" "this" {
     }
   }
   vpc_zone_identifier = tolist(data.aws_subnet_ids.private.ids)
+  target_group_arns   = [aws_lb_target_group.this.arn]
   tag {
     key                 = "kubernetes.io/cluster/${var.name}"
     value               = "owned"
@@ -94,5 +105,89 @@ resource "aws_autoscaling_group" "this" {
     key                 = "Name"
     value               = "eks-${var.name}-worker-group"
     propagate_at_launch = true
+  }
+}
+
+# ALB for connections from internet
+resource "aws_lb" "this" {
+  name               = "eks-${var.name}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  subnets            = data.aws_subnet_ids.public.ids
+  security_groups    = [aws_security_group.alb.id]
+}
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.this.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  certificate_arn   = var.certificate_arn
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.this.arn
+  }
+}
+resource "aws_lb_target_group" "this" {
+  name     = "eks-${var.name}-target-group"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+  health_check {
+    path    = "/healthz" # for nginx ingress controller
+    matcher = "200"
+  }
+}
+
+# Security group for ALB
+resource "aws_security_group" "alb" {
+  name        = "eks-${var.name}-alb-sg"
+  description = "ALB SG for eks ${var.name}"
+  vpc_id      = var.vpc_id
+  tags        = { Name = "eks-${var.name}-alb-sg" }
+}
+locals {
+  rules = {
+    https         = ["ingress", "tcp", 443, aws_security_group.alb.id, null, var.cidrs, "HTTPS"]
+    http          = ["ingress", "tcp", 80, aws_security_group.alb.id, null, var.cidrs, "HTTP"]
+    out           = ["egress", "tcp", 80, aws_security_group.alb.id, var.worker_sg_id, null, "ALB to workers"]
+    health-checks = ["ingress", "tcp", 80, var.worker_sg_id, aws_security_group.alb.id, null, "Workers from ALB"]
+  }
+}
+resource "aws_security_group_rule" "this" {
+  for_each                 = local.rules
+  type                     = each.value[0]
+  protocol                 = each.value[1]
+  from_port                = each.value[2]
+  to_port                  = each.value[2]
+  security_group_id        = each.value[3]
+  source_security_group_id = each.value[4]
+  cidr_blocks              = each.value[5]
+  description              = each.value[6]
+}
+
+data "aws_route53_zone" "this" {
+  name = "${var.domain}."
+}
+resource "aws_route53_record" "this" {
+  zone_id = data.aws_route53_zone.this.zone_id
+  name    = "${var.prefix}.${var.domain}"
+  type    = "A"
+  alias {
+    name                   = aws_lb.this.dns_name
+    zone_id                = aws_lb.this.zone_id
+    evaluate_target_health = true
   }
 }

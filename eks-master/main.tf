@@ -15,8 +15,16 @@ resource "aws_eks_cluster" "this" {
 }
 
 resource "aws_iam_role" "this" {
-  description        = "Service role for eks ${var.name} cluster"
-  assume_role_policy = file("${path.module}/role_policy.json")
+  name        = "eks-${var.name}-master-role"
+  description = "Service role for eks ${var.name} cluster"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "eks.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
 }
 
 resource "aws_iam_role_policy_attachment" "cluster" {
@@ -47,60 +55,25 @@ resource "aws_security_group" "workers" {
   }
 }
 
-resource "aws_security_group_rule" "master-from-workers" {
-  description              = "HTTPS to control plane from workers"
-  security_group_id        = aws_security_group.master.id
-  source_security_group_id = aws_security_group.workers.id
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 443
-  to_port                  = 443
-}
-resource "aws_security_group_rule" "master-to-workers" {
-  description              = "Range from control plane to workers"
-  security_group_id        = aws_security_group.master.id
-  source_security_group_id = aws_security_group.workers.id
-  type                     = "egress"
-  protocol                 = "tcp"
-  from_port                = 1025
-  to_port                  = 65535
+locals {
+  rules = {
+    master-in  = ["ingress", "tcp", 443, 443, aws_security_group.master.id, aws_security_group.workers.id, null, "HTTPS to control plane from workers"]
+    master-out = ["egress", "tcp", 1025, 65535, aws_security_group.master.id, aws_security_group.workers.id, null, "Range from control plane to workers"]
+    https-in   = ["ingress", "tcp", 443, 443, aws_security_group.workers.id, aws_security_group.master.id, null, "HTTPS to workers from control plane"]
+    range-in   = ["ingress", "tcp", 1025, 65535, aws_security_group.workers.id, aws_security_group.master.id, null, "Range to workers from control plane"]
+    cluster    = ["ingress", "-1", 0, 0, aws_security_group.workers.id, aws_security_group.workers.id, null, "All traffic between workers"]
+    out        = ["egress", "-1", 0, 0, aws_security_group.workers.id, null, ["0.0.0.0/0"], "All outgoing traffic from workers"]
+  }
 }
 
-resource "aws_security_group_rule" "workers-from-master-https" {
-  description              = "HTTPS to workers from control plane"
-  security_group_id        = aws_security_group.workers.id
-  source_security_group_id = aws_security_group.master.id
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 443
-  to_port                  = 443
-}
-resource "aws_security_group_rule" "workers-from-master-range" {
-  description              = "Range to workers from control plane"
-  security_group_id        = aws_security_group.workers.id
-  source_security_group_id = aws_security_group.master.id
-  type                     = "ingress"
-  protocol                 = "tcp"
-  from_port                = 1025
-  to_port                  = 65535
-}
-
-resource "aws_security_group_rule" "workers-from-workers" {
-  description              = "All traffic between workers"
-  security_group_id        = aws_security_group.workers.id
-  source_security_group_id = aws_security_group.workers.id
-  type                     = "ingress"
-  protocol                 = "-1"
-  from_port                = 0
-  to_port                  = 0
-}
-
-resource "aws_security_group_rule" "workers-to-anywhere" {
-  description       = "All outgoing traffic from workers"
-  security_group_id = aws_security_group.workers.id
-  cidr_blocks       = ["0.0.0.0/0"]
-  type              = "egress"
-  protocol          = "-1"
-  from_port         = 0
-  to_port           = 0
+resource "aws_security_group_rule" "this" {
+  for_each                 = local.rules
+  type                     = each.value[0]
+  protocol                 = each.value[1]
+  from_port                = each.value[2]
+  to_port                  = each.value[3]
+  security_group_id        = each.value[4]
+  source_security_group_id = each.value[5]
+  cidr_blocks              = each.value[6]
+  description              = each.value[7]
 }

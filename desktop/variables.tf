@@ -16,7 +16,7 @@ variable "domain" {
 }
 
 variable "prefix" {
-  description = "Name to prefix to the doma"
+  description = "Name to prefix to the domain"
   default     = "desktop"
 }
 

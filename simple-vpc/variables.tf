@@ -14,3 +14,15 @@ variable "public_subnet_cidrs" {
   type        = list(string)
   default     = ["192.168.0.0/19", "192.168.32.0/19"]
 }
+
+variable "custom_vpc_tags" {
+  description = "Additional tags to add to VPC"
+  type        = map(string)
+  default     = {}
+}
+
+variable "custom_private_tags" {
+  description = "Additional tags to add to private subnets"
+  type        = map(string)
+  default     = {}
+}
