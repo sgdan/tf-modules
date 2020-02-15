@@ -142,8 +142,8 @@ resource "aws_lb_listener" "https" {
 }
 resource "aws_lb_target_group" "this" {
   name     = "eks-${var.name}-target-group"
-  port     = 80
-  protocol = "HTTP"
+  port     = 443
+  protocol = "HTTPS"
   vpc_id   = var.vpc_id
   health_check {
     path    = "/healthz" # for nginx ingress controller
@@ -162,8 +162,8 @@ locals {
   rules = {
     https         = ["ingress", "tcp", 443, aws_security_group.alb.id, null, var.cidrs, "HTTPS"]
     http          = ["ingress", "tcp", 80, aws_security_group.alb.id, null, var.cidrs, "HTTP"]
-    out           = ["egress", "tcp", 80, aws_security_group.alb.id, var.worker_sg_id, null, "ALB to workers"]
-    health-checks = ["ingress", "tcp", 80, var.worker_sg_id, aws_security_group.alb.id, null, "Workers from ALB"]
+    out           = ["egress", "tcp", 443, aws_security_group.alb.id, var.worker_sg_id, null, "ALB to workers"]
+    health-checks = ["ingress", "tcp", 443, var.worker_sg_id, aws_security_group.alb.id, null, "Workers from ALB"]
   }
 }
 resource "aws_security_group_rule" "this" {
